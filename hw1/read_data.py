@@ -1,24 +1,23 @@
 import numpy as np
 
 class Dataset(object):
-    def __init__(self, ldp='train.lab', tsp='fbank/train_copy.ark',
-                       cdp='48phone_char.map', rp='48_39.map'):
+    def __init__(self, path='../hw1_dataset/'):
 
         self.char_dict = {}
         self.label_dict = {}
         self.reduce_dict = {}
         self.sentence = Sentence()
         
-        self.char_dict_path = cdp
+        self.char_dict_path = path + '48phone_char.map'
         self.set_char_dict()
 
-        self.label_dict_path = ldp
+        self.label_dict_path = path + 'label/train.lab'
         self.set_label_dict()
 
-        self.reduce_dict_path = rp
+        self.reduce_dict_path = path + 'phones/48_39.map'
         self.set_reduce_dict()
 
-        self.train_set_path = tsp
+        self.train_set_path = path + 'fbank/train.ark'
 
     def set_char_dict(self):
         with open(self.char_dict_path) as f:
@@ -84,12 +83,3 @@ class SentenceBatch(object):
                    np.vstack(self.y_train))
             self.x_train = []
             self.y_train = []
-
-if __name__ == "__main__":
-    DS = Dataset()
-    SB = SentenceBatch(DS.set_train_label(), batch_size=2)
-    batch_gen = SB.collect_sentence()
-    for i in range(3):
-        X, Y = next(batch_gen)
-        print('X.shape', X.shape)
-        print('Y.shape', Y.shape)
