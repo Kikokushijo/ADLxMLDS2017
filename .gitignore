@@ -99,3 +99,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# ADLHW1 training set
+/hw1/train.lab
+/hw1/fbank.zip
+/hw1/fbank/*
