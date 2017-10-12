@@ -1,6 +1,5 @@
 from read_data import Dataset
 from keras.models import Sequential
-from keras import optimizers
 from keras.layers.core import Dense, Dropout, Masking
 from keras.layers.wrappers import TimeDistributed
 from keras.layers.recurrent import LSTM
@@ -8,6 +7,7 @@ from keras.layers.recurrent import LSTM
 
 if __name__ == "__main__":
     DS = Dataset(r'D:/Data/hw1_dataset')
+    DS.set_label_dict()
     X, Y = DS.get_train_data()
     print(X.shape, Y.shape)
 

@@ -102,3 +102,6 @@ ENV/
 
 # ADLHW1 training set
 /hw1_dataset/*
+
+# ADL output
+*.csv

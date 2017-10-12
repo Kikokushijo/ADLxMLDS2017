@@ -4,32 +4,35 @@ import os
 class Dataset(object):
     def __init__(self, path='../hw1_dataset/'):
 
+        self.phone_dict = {}
         self.char_dict = {}
         self.label_dict = {}
         self.reduce_dict = {}
         
-        self.char_dict_path = os.path.join(path, '48phone_char.map')
-        self.set_char_dict()
+        self.phone_dict_path = os.path.join(path, '48phone_char.map')
+        self.set_phone_dict()
 
         self.label_dict_path = os.path.join(path, 'label', 'train.lab')
-        self.set_label_dict()
+        # self.set_label_dict()
 
         self.reduce_dict_path = os.path.join(path, 'phones', '48_39.map')
         self.set_reduce_dict()
 
         self.train_set_path = os.path.join(path, 'fbank', 'train.ark')
+        self.test_set_path = os.path.join(path, 'fbank', 'test.ark')
 
-    def set_char_dict(self):
-        with open(self.char_dict_path) as f:
+    def set_phone_dict(self):
+        with open(self.phone_dict_path) as f:
             for line in f.readlines():
                 phone, num, char = line.strip('\n').split('\t')
-                self.char_dict[phone] = [int(num), char]
+                self.phone_dict[phone] = int(num)
+                self.char_dict[int(num)] = char
 
     def set_label_dict(self):
         with open(self.label_dict_path, 'r') as f:
             for line in f:
                 name, label = line.strip('\n').split(',')
-                self.label_dict[name] = self.char_dict[label][0]
+                self.label_dict[name] = self.phone_dict[label]
 
     def get_train_data(self):
         with open(self.train_set_path, 'r') as f:
@@ -51,11 +54,33 @@ class Dataset(object):
         
         return (np.vstack(all_feature), np.vstack(all_label))
 
+    def get_test_data(self):
+        with open(self.test_set_path, 'r') as f:
+            test_data = []
+            sentence = None
+            for line in f:
+                name, *features = line.strip('\n').split(' ')
+                spkird, sentid, timeid = name.split('_')
+                key = "%s_%s" % (spkird, sentid)
+
+                if len(test_data) == 0 or test_data[-1][0] != key:
+                    sentence = Sentence(key)
+                    test_data.append([key, sentence])
+                sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
+
+            all_feature = []
+            all_key = []
+            for key, sentence in test_data:
+                all_feature.append([sentence.feature])
+                all_key.append(key)
+
+            return (all_key, np.vstack(all_feature))
+
     def set_reduce_dict(self):
         with open(self.reduce_dict_path) as f:
             for line in f:
                 original, convert = line.strip('\n').split('\t')
-                self.reduce_dict[original] = convert
+                self.reduce_dict[self.phone_dict[original]] = self.phone_dict[convert]
 
 class Sentence(object):
     def __init__(self, name, feature_width=69, max_length=800, char_variety=48):
