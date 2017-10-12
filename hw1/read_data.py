@@ -31,7 +31,7 @@ class Dataset(object):
                 name, label = line.strip('\n').split(',')
                 self.label_dict[name] = self.char_dict[label][0]
 
-    def set_train_label(self):
+    def get_train_data(self):
         with open(self.train_set_path, 'r') as f:
             sentence_dict = {}
             for line in f:
