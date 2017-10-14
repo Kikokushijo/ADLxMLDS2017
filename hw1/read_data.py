@@ -36,15 +36,19 @@ class Dataset(object):
 
     def get_train_data(self):
         with open(self.train_set_path, 'r') as f:
-            sentence_dict = {}
+            train_data = []
+            sentence = None
             for line in f:
                 name, *features = line.strip('\n').split(' ')
                 spkird, sentid, timeid = name.split('_')
                 key = "%s_%s" % (spkird, sentid)
-                if key not in sentence_dict:
-                    sentence_dict[key] = Sentence(key)
-                sentence_dict[key].feature[int(timeid)-1][:] = np.array(features).astype(np.float)
-                sentence_dict[key].label[int(timeid)-1][self.label_dict[name]] = 1.0
+
+
+                if len(test_data) == 0 or test_data[-1][0] != key:
+                    sentence = Sentence(key)
+                    train_data.append([key, sentence])
+                sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
+                sentence.label[int(timeid)-1][self.label_dict[name]] = 1.0
         
         all_feature = []
         all_label = []
@@ -65,14 +69,14 @@ class Dataset(object):
 
                 if len(test_data) == 0 or test_data[-1][0] != key:
                     sentence = Sentence(key)
-                    test_data.append([key, sentence])
+                    test_data.append(sentence)
                 sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
 
             all_feature = []
             all_key = []
-            for key, sentence in test_data:
+            for sentence in test_data:
                 all_feature.append([sentence.feature])
-                all_key.append(key)
+                all_key.append(sentence.name)
 
             return (all_key, np.vstack(all_feature))
 
