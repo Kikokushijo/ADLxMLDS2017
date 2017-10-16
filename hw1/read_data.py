@@ -2,64 +2,62 @@ import numpy as np
 import os
 
 class Dataset(object):
-    def __init__(self, path='../hw1_dataset/'):
-
-        self.phone_dict = {}
-        self.char_dict = {}
-        self.label_dict = {}
-        self.reduce_dict = {}
-        
-        self.phone_dict_path = os.path.join(path, '48phone_char.map')
-        self.set_phone_dict()
-
+    def __init__(self, path, dataset='fbank'):
+        self.read_phone2num()
+        self.read_num2char()
+        self.feature_dimdict = {'fbank':69, 'mfcc':39}
+        self.feature_dim = self.feature_dimdict[dataset]
+        self.train_features = []
+        self.train_labels = []
+        self.train_data_path = os.path.join(path, dataset, 'train.ark')
+        self.test_data_path = os.path.join(path, dataset, 'test.ark')
         self.label_dict_path = os.path.join(path, 'label', 'train.lab')
-        # self.set_label_dict()
 
-        self.reduce_dict_path = os.path.join(path, 'phones', '48_39.map')
-        self.set_reduce_dict()
+    def read_phone2num(self):
+        self.phone2num = {}
+        with open('dict/phone2num') as f:
+            for line in f:
+                phone, num = line.strip('\n').split(' ')
+                self.phone2num[phone] = int(num)
 
-        self.train_set_path = os.path.join(path, 'fbank', 'train.ark')
-        self.test_set_path = os.path.join(path, 'fbank', 'test.ark')
-
-    def set_phone_dict(self):
-        with open(self.phone_dict_path) as f:
-            for line in f.readlines():
-                phone, num, char = line.strip('\n').split('\t')
-                self.phone_dict[phone] = int(num)
-                self.char_dict[int(num)] = char
+    def read_num2char(self):
+        self.num2char = {}
+        with open('dict/num2char') as f:
+            for line in f:
+                num, char = line.strip('\n').split(' ')
+                self.num2char[int(num)] = char
 
     def set_label_dict(self):
+        self.label_dict = {}
         with open(self.label_dict_path, 'r') as f:
             for line in f:
-                name, label = line.strip('\n').split(',')
-                self.label_dict[name] = self.phone_dict[label]
+                name, phone = line.strip('\n').split(',')
+                self.label_dict[name] = self.phone2num[phone]
 
     def get_train_data(self):
-        with open(self.train_set_path, 'r') as f:
-            train_data = []
-            sentence = None
-            for line in f:
-                name, *features = line.strip('\n').split(' ')
-                spkird, sentid, timeid = name.split('_')
-                key = "%s_%s" % (spkird, sentid)
+        if not (self.train_features and self.train_labels):
+            with open(self.train_data_path, 'r') as f:
+                train_data = []
+                sentence = None
+                for line in f:
+                    name, *features = line.strip('\n').split(' ')
+                    spkird, sentid, timeid = name.split('_')
+                    key = "%s_%s" % (spkird, sentid)
 
+                    if len(train_data) == 0 or train_data[-1].name != key:
+                        sentence = Sentence(key, self.feature_dim)
+                        train_data.append(sentence)
+                    sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
+                    sentence.label[int(timeid)-1][self.label_dict[name]] = 1.0
+                    sentence.length = int(timeid)
 
-                if len(test_data) == 0 or test_data[-1][0] != key:
-                    sentence = Sentence(key)
-                    train_data.append([key, sentence])
-                sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
-                sentence.label[int(timeid)-1][self.label_dict[name]] = 1.0
-        
-        all_feature = []
-        all_label = []
-        for pair in sentence_dict.items():
-            all_feature.append([pair[1].feature])
-            all_label.append([pair[1].label])
-        
-        return (np.vstack(all_feature), np.vstack(all_label))
+                self.train_features = np.vstack([[sentence.feature] for sentence in train_data])
+                self.train_labels = np.vstack([[sentence.label] for sentence in train_data])
+
+        return self.train_features, self.train_labels
 
     def get_test_data(self):
-        with open(self.test_set_path, 'r') as f:
+        with open(self.test_data_path, 'r') as f:
             test_data = []
             sentence = None
             for line in f:
@@ -67,29 +65,30 @@ class Dataset(object):
                 spkird, sentid, timeid = name.split('_')
                 key = "%s_%s" % (spkird, sentid)
 
-                if len(test_data) == 0 or test_data[-1][0] != key:
-                    sentence = Sentence(key)
+                if len(test_data) == 0 or test_data[-1].name != key:
+                    sentence = Sentence(key, self.feature_dim)
                     test_data.append(sentence)
                 sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
+                sentence.length = int(timeid)
 
-            all_feature = []
-            all_key = []
-            for sentence in test_data:
-                all_feature.append([sentence.feature])
-                all_key.append(sentence.name)
+            self.test_features = np.vstack([[sentence.feature] for sentence in test_data])
+            self.name = [sentence.name for sentence in test_data]
 
-            return (all_key, np.vstack(all_feature))
+            return self.name, self.test_features
 
-    def set_reduce_dict(self):
-        with open(self.reduce_dict_path) as f:
-            for line in f:
-                original, convert = line.strip('\n').split('\t')
-                self.reduce_dict[self.phone_dict[original]] = self.phone_dict[convert]
+    def shuffle_train_data(self):
+        rng_state = np.random.get_state()
+        np.random.shuffle(self.train_features)
+        np.random.set_state(rng_state)
+        np.random.shuffle(self.train_labels)
+
+
 
 class Sentence(object):
-    def __init__(self, name, feature_width=69, max_length=800, char_variety=48):
+    def __init__(self, name, feature_dim, max_length=800, char_variety=39):
         self.name = name
-        self.feature_width = feature_width
+        self.feature_dim = feature_dim
         self.max_length = max_length
-        self.feature = np.zeros((max_length, feature_width))
+        self.feature = np.zeros((max_length, feature_dim))
         self.label = np.zeros((max_length, char_variety))
+        self.length = 0
