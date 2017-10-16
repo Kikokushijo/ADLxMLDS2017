@@ -2,8 +2,8 @@ from read_data import Dataset
 from model_rnn import select_model
 import os
 
-def output_result(prob_filter):
-    if prob_filter == 'from_class':
+def output_result(filter, output_filename, predict):
+    if filter == 'from_class':
         with open(output_filename, 'w') as f:
             f.write('id,phone_sequence\n')
             for index, row in enumerate(predict):
@@ -24,7 +24,7 @@ def output_result(prob_filter):
                         result += DS.num2char[record[i]]
                 f.write('%s,%s\n' % (key[index], result[1:]))
                 print(result)
-    if prob_filter == 'from_prob':
+    if filter == 'from_prob':
         with open('mfcc_fbank.csv', 'w') as f:
             f.write('id,phone_sequence\n')
             for index, sentence in enumerate(mfcc_fbank):
@@ -73,3 +73,6 @@ if __name__ == "__main__":
     model_f = select_model(set_model, 'fbank')
     model_f.load_weights(os.path.join('models', 'RNN_model_fbank_complex2.h5'))
     predict_f = model.predict(sentences_fbank)
+
+    output_filename = 'output/mfcc_bid.csv'
+    output_result(filter='from_class', output_filename=output_filename, predict=predict_f)
