@@ -1,5 +1,5 @@
 from read_data import Dataset
-from model_rnn import select_model
+from model_rnn import Model
 import os
 
 def output_result(filter, output_filename, predict):

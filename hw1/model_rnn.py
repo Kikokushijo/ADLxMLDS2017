@@ -6,7 +6,7 @@ from keras.layers.recurrent import LSTM
 import os
 
 class Model(object):
-    def __init__(set_model, dataset):
+    def __init__(self, set_model, dataset):
 
         feature_dimdict = {'mfcc':39, 'fbank':69, 'both':108}
         feature_dim = feature_dimdict[dataset]
@@ -31,6 +31,7 @@ class Model(object):
             model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
             print(model.summary())
         if set_model == 2:
+            # 85 % acc -> 9.63
             model = Sequential()
             model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
             model.add(LSTM(100, return_sequences=True))
@@ -70,6 +71,67 @@ class Model(object):
             model.add(Dropout(0.2))
             model.add(TimeDistributed(Dense(39, activation='softmax')))
             model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
+            print(model.summary())
+        if set_model == 5:
+            model = Sequential()
+            model.add(Conv1D(filters=512, kernel_size=11, input_shape=(800, 39), padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=256, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=128, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=32, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Dropout(0.25))
+            model.add(LSTM(800, return_sequences=True))
+            model.add(Dropout(0.4))
+            model.add(LSTM(800, return_sequences=True))
+            model.add(Dropout(0.2))
+            # model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
+            # model.add(MaxPooling1D(1))
+            # model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
+            # model.add(MaxPooling1D(1))
+            # model.add(Dropout(0.2))
+            model.add(TimeDistributed(Dense(64, activation='relu')))
+            model.add(Dropout(0.2))
+            model.add(TimeDistributed(Dense(39, activation='softmax')))
+            model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+            print(model.summary())
+        if set_model == 6:
+            model = Sequential()
+            model.add(Conv1D(filters=512, kernel_size=11, input_shape=(800, 39), padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=256, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=128, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=32, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            # model.add(Masking(mask_value=0.))
+            model.add(Dropout(0.25))
+            model.add(LSTM(100, return_sequences=True))
+            model.add(Dropout(0.4))
+            model.add(LSTM(100, return_sequences=True))
+            model.add(Dropout(0.2))
+            model.add(Conv1D(filters=512, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=256, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=128, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Conv1D(filters=32, kernel_size=11, padding='same', activation='relu'))
+            model.add(MaxPooling1D(1))
+            model.add(Dropout(0.2))
+            model.add(TimeDistributed(Dense(64, activation='relu')))
+            model.add(Dropout(0.2))
+            model.add(TimeDistributed(Dense(39, activation='softmax')))
+            model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
             print(model.summary())
 
 if __name__ == "__main__":
