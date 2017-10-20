@@ -2,6 +2,7 @@ from read_data import Dataset
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Masking
 from keras.layers.wrappers import TimeDistributed
+from keras.layers import Bidirectional
 from keras.layers.recurrent import LSTM
 import os
 
