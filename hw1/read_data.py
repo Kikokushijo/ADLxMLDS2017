@@ -12,6 +12,7 @@ class Dataset(object):
         self.train_labels = []
         self.test_features = []
         self.name = []
+        self.train_data = []
         self.train_data_path = os.path.join(path, dataset, 'train.ark')
         self.test_data_path = os.path.join(path, dataset, 'test.ark')
         self.label_dict_path = os.path.join(path, 'label', 'train.lab')
@@ -48,11 +49,11 @@ class Dataset(object):
                     key = "%s_%s" % (spkird, sentid)
 
                     if len(train_data) == 0 or train_data[-1].name != key:
-                        sentence = Sentence(key, self.feature_dim + int(mark_gender))
+                        sentence = Sentence(key, self.feature_dim + int(mark_gender) * 2)
                         train_data.append(sentence)
-                    sentence.feature[int(timeid)-1][:-1] = np.array(features).astype(np.float)
+                    sentence.feature[int(timeid)-1][:self.feature_dim] = np.array(features).astype(np.float)
                     if mark_gender:
-                        sentence.feature[int(timeid)-1][-1] = 1.0 if sentence.name[0] == 'f' else -1.0
+                        sentence.feature[int(timeid)-1][-1 if sentence.name[0] == 'f' else -2] = 1.0
                     sentence.label_onehot[int(timeid)-1][self.label_dict[name]] = 1.0
                     sentence.label[int(timeid)-1] = self.label_dict[name]
                     sentence.length = int(timeid)
@@ -85,10 +86,10 @@ class Dataset(object):
                     self.train_features = np.vstack([[sentence.feature] for sentence in train_data])
                     self.train_labels_onehot = np.vstack([[sentence.label_onehot] for sentence in train_data])
                     self.train_labels = np.vstack([[sentence.label] for sentence in train_data])
-
+                self.train_data = train_data
         return self.train_features, self.train_labels_onehot
 
-    def get_test_data(self, padding=False):
+    def get_test_data(self, padding=False, mark_gender=False):
         if len(self.test_features) == 0 or len(self.name) == 0:
             with open(self.test_data_path, 'r') as f:
                 test_data = []
@@ -99,11 +100,13 @@ class Dataset(object):
                     key = "%s_%s" % (spkird, sentid)
 
                     if len(test_data) == 0 or test_data[-1].name != key:
-                        sentence = Sentence(key, self.feature_dim)
+                        sentence = Sentence(key, self.feature_dim + int(mark_gender) * 2)
                         test_data.append(sentence)
-                    sentence.feature[int(timeid)-1][:] = np.array(features).astype(np.float)
+                    sentence.feature[int(timeid)-1][:self.feature_dim] = np.array(features).astype(np.float)
                     sentence.length = int(timeid)
-
+                    if mark_gender:
+                        sentence.feature[int(timeid)-1][-1 if sentence.name[0] == 'f' else -2] = 1.0
+    
                 if padding:
                     for sentence in test_data:
                         length = sentence.length
