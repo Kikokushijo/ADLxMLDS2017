@@ -38,58 +38,58 @@ class Dataset(object):
                 name, phone = line.strip('\n').split(',')
                 self.label_dict[name] = self.phone2num[phone]
 
-    def get_train_data(self, padding=False, separate=False, mark_gender=False):
-        if len(self.train_features) == 0  and len(self.train_labels_onehot) == 0:
-            with open(self.train_data_path, 'r') as f:
-                train_data = []
-                sentence = None
-                for line in f:
-                    name, *features = line.strip('\n').split(' ')
-                    spkird, sentid, timeid = name.split('_')
-                    key = "%s_%s" % (spkird, sentid)
+    def get_train_data(self, repeat=False, separate=False, mark_gender=False):
+        # if len(self.train_features) == 0 and len(self.train_labels_onehot) == 0:
+        with open(self.train_data_path, 'r') as f:
+            train_data = []
+            sentence = None
+            for line in f:
+                name, *features = line.strip('\n').split(' ')
+                spkird, sentid, timeid = name.split('_')
+                key = "%s_%s" % (spkird, sentid)
 
-                    if len(train_data) == 0 or train_data[-1].name != key:
-                        sentence = Sentence(key, self.feature_dim + int(mark_gender) * 2)
-                        train_data.append(sentence)
-                    sentence.feature[int(timeid)-1][:self.feature_dim] = np.array(features).astype(np.float)
-                    if mark_gender:
-                        sentence.feature[int(timeid)-1][-1 if sentence.name[0] == 'f' else -2] = 1.0
-                    sentence.label_onehot[int(timeid)-1][self.label_dict[name]] = 1.0
-                    sentence.label[int(timeid)-1] = self.label_dict[name]
-                    sentence.length = int(timeid)
+                if len(train_data) == 0 or train_data[-1].name != key:
+                    sentence = Sentence(key, self.feature_dim + int(mark_gender) * 2)
+                    train_data.append(sentence)
+                sentence.feature[int(timeid)-1][:self.feature_dim] = np.array(features).astype(np.float)
+                if mark_gender:
+                    sentence.feature[int(timeid)-1][-1 if sentence.name[0] == 'f' else -2] = 1.0
+                sentence.label_onehot[int(timeid)-1][self.label_dict[name]] = 1.0
+                sentence.label[int(timeid)-1] = self.label_dict[name]
+                sentence.length = int(timeid)
 
 
-                if padding:
-                    for sentence in train_data:
-                        length = sentence.length
-                        max_length = sentence.max_length
-                        padding_times = max_length // length
-                        if padding_times > 1:
-                            for i in range(1, padding_times):
-                                sentence.feature[length*i:length*(i+1)] = sentence.feature[:length]
-                                sentence.label_onehot[length*i:length*(i+1)] = sentence.label_onehot[:length]
-                                sentence.label[length*i:length*(i+1)] = sentence.label[:length]
-                                # for index, row in enumerate(sentence.label[:length]):
-                                #     print('index: ', index, 'row: ', row)
-                        sentence.feature[length*padding_times:max_length] = sentence.feature[length-1]
-                        sentence.label_onehot[length*padding_times:max_length] = sentence.label_onehot[length-1]
-                        sentence.label[length*padding_times:max_length] = sentence.label[length-1]
+            if repeat:
+                for sentence in train_data:
+                    length = sentence.length
+                    max_length = sentence.max_length
+                    repeat_times = max_length // length
+                    if repeat_times > 1:
+                        for i in range(1, repeat_times):
+                            sentence.feature[length*i:length*(i+1)] = sentence.feature[:length]
+                            sentence.label_onehot[length*i:length*(i+1)] = sentence.label_onehot[:length]
+                            sentence.label[length*i:length*(i+1)] = sentence.label[:length]
+                            # for index, row in enumerate(sentence.label[:length]):
+                            #     print('index: ', index, 'row: ', row)
+                    sentence.feature[length*repeat_times:max_length] = sentence.feature[length-1]
+                    sentence.label_onehot[length*repeat_times:max_length] = sentence.label_onehot[length-1]
+                    sentence.label[length*repeat_times:max_length] = sentence.label[length-1]
 
-                if separate:
-                    self.train_features = [np.vstack([[sentence.feature] for sentence in train_data if sentence.name[0] == 'f']),
-                                           np.vstack([[sentence.feature] for sentence in train_data if sentence.name[0] == 'm'])]
-                    self.train_labels_onehot = [np.vstack([[sentence.label_onehot] for sentence in train_data if sentence.name[0] == 'f']),
-                                                np.vstack([[sentence.label_onehot] for sentence in train_data if sentence.name[0] == 'm'])]
-                    self.train_labels = [np.vstack([[sentence.label] for sentence in train_data if sentence.name[0] == 'f']), 
-                                         np.vstack([[sentence.label] for sentence in train_data if sentence.name[0] == 'm'])]
-                else:
-                    self.train_features = np.vstack([[sentence.feature] for sentence in train_data])
-                    self.train_labels_onehot = np.vstack([[sentence.label_onehot] for sentence in train_data])
-                    self.train_labels = np.vstack([[sentence.label] for sentence in train_data])
-                self.train_data = train_data
+            if separate:
+                self.train_features = [np.vstack([[sentence.feature] for sentence in train_data if sentence.name[0] == 'f']),
+                                       np.vstack([[sentence.feature] for sentence in train_data if sentence.name[0] == 'm'])]
+                self.train_labels_onehot = [np.vstack([[sentence.label_onehot] for sentence in train_data if sentence.name[0] == 'f']),
+                                            np.vstack([[sentence.label_onehot] for sentence in train_data if sentence.name[0] == 'm'])]
+                self.train_labels = [np.vstack([[sentence.label] for sentence in train_data if sentence.name[0] == 'f']), 
+                                     np.vstack([[sentence.label] for sentence in train_data if sentence.name[0] == 'm'])]
+            else:
+                self.train_features = np.vstack([[sentence.feature] for sentence in train_data])
+                self.train_labels_onehot = np.vstack([[sentence.label_onehot] for sentence in train_data])
+                self.train_labels = np.vstack([[sentence.label] for sentence in train_data])
+            self.train_data = train_data
         return self.train_features, self.train_labels_onehot
 
-    def get_test_data(self, padding=False, mark_gender=False):
+    def get_test_data(self, repeat=False, mark_gender=False):
         if len(self.test_features) == 0 or len(self.name) == 0:
             with open(self.test_data_path, 'r') as f:
                 test_data = []
@@ -107,29 +107,33 @@ class Dataset(object):
                     if mark_gender:
                         sentence.feature[int(timeid)-1][-1 if sentence.name[0] == 'f' else -2] = 1.0
     
-                if padding:
+                if repeat:
                     for sentence in test_data:
                         length = sentence.length
                         max_length = sentence.max_length
-                        padding_times = max_length // length
-                        if padding_times > 1:
-                            for i in range(1, padding_times):
+                        repeat_times = max_length // length
+                        if repeat_times > 1:
+                            for i in range(1, repeat_times):
                                 sentence.feature[length*i:length*(i+1)] = sentence.feature[:length]
 
-                        sentence.feature[length*padding_times:max_length] = sentence.feature[length-1]
+                        sentence.feature[length*repeat_times:max_length] = sentence.feature[length-1]
 
                 self.test_features = np.vstack([[sentence.feature] for sentence in test_data])
                 self.name = [(sentence.name, sentence.length) for sentence in test_data]
 
         return self.name, self.test_features
 
+    def get_biased_weights(self):
+        self.sample_weights = np.zeros((len(self.train_data), self.train_data[0].max_length))
+        for index, sentence in enumerate(self.train_data):
+            self.sample_weights[index][:sentence.length] = 1
+        return self.sample_weights
+
     def shuffle_train_data(self):
         rng_state = np.random.get_state()
         np.random.shuffle(self.train_features)
         np.random.set_state(rng_state)
         np.random.shuffle(self.train_labels_onehot)
-
-
 
 class Sentence(object):
     def __init__(self, name, feature_dim, max_length=800, char_variety=39):

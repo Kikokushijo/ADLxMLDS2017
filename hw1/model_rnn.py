@@ -7,153 +7,49 @@ from keras.layers.convolutional import Conv1D
 from keras.layers.pooling import MaxPooling1D
 from keras.layers.recurrent import LSTM
 from keras.callbacks import ModelCheckpoint
+from copy import copy
+import numpy as np
 import os
-
-def SetModel(self, set_model, dataset):
-
-    feature_dimdict = {'mfcc':39, 'fbank':69, 'both':108}
-    feature_dim = feature_dimdict[dataset]
-    if set_model == 0:
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
-        model.add(LSTM(128, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        optimizer = optimizers.RMSprop(lr=0.01)
-        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-        print(model.summary())
-    if set_model == 1:
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
-        model.add(LSTM(800, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(TimeDistributed(Dense(128, activation='relu')))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-        print(model.summary())
-    if set_model == 2:
-        # 85 % acc -> 9.63
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
-        model.add(LSTM(100, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(LSTM(200, return_sequences=True))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(128, activation='relu')))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-        print(model.summary())
-    if set_model == 3:
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
-        model.add(LSTM(100, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(LSTM(200, return_sequences=True))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(128, activation='relu')))
-        model.add(Dropout(0.2))
-        model.add(LSTM(200, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(LSTM(100, return_sequences=True))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-        print(model.summary())
-    if set_model == 4:
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
-        # model.add(Conv2D(filters=128, kernel_size=(5, 5), padding='same', input_shape(800, 69, 1)))
-        model.add(Bidirectional(LSTM(128, return_sequences=True)))
-        model.add(Dropout(0.4))
-        model.add(Bidirectional(LSTM(128, return_sequences=True)))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(128, activation='relu')))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        model.compile(loss='categorical_crossentropy', optimizer='adagrad', metrics=['accuracy'])
-        print(model.summary())
-    if set_model == 5:
-        model = Sequential()
-        model.add(Conv1D(filters=512, kernel_size=11, input_shape=(800, 39), padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=256, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=128, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=32, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Dropout(0.25))
-        model.add(LSTM(800, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(LSTM(800, return_sequences=True))
-        model.add(Dropout(0.2))
-        # model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
-        # model.add(MaxPooling1D(1))
-        # model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
-        # model.add(MaxPooling1D(1))
-        # model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(64, activation='relu')))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        print(model.summary())
-    if set_model == 6:
-        model = Sequential()
-        model.add(Conv1D(filters=512, kernel_size=11, input_shape=(800, 39), padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=256, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=128, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=32, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        # model.add(Masking(mask_value=0.))
-        model.add(Dropout(0.25))
-        model.add(LSTM(100, return_sequences=True))
-        model.add(Dropout(0.4))
-        model.add(LSTM(100, return_sequences=True))
-        model.add(Dropout(0.2))
-        model.add(Conv1D(filters=512, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=256, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=128, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=64, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Conv1D(filters=32, kernel_size=11, padding='same', activation='relu'))
-        model.add(MaxPooling1D(1))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(64, activation='relu')))
-        model.add(Dropout(0.2))
-        model.add(TimeDistributed(Dense(39, activation='softmax')))
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-        print(model.summary())
-
-    return model
+import sys
 
 if __name__ == "__main__":
-    DS = Dataset(input())
-    # DS = Dataset(r'../hw1_dataset')
-    DS.set_label_dict()
-    X, Y = DS.get_train_data()
-    print(X.shape, Y.shape)
 
-    set_model = 2
-    model = Model(set_model)
+    datapath = '../hw1_dataset'
+    DS_m = Dataset(datapath, dataset='mfcc')
+    DS_f = Dataset(datapath, dataset='fbank')
 
-    for _ in range(10):
-        try:
-            model.load_weights(os.path.join('models', 'RNN_model%d.h5' % (set_model)))
-        except:
-            pass
+    DS_m.set_label_dict()
+    DS_f.set_label_dict()
 
-        DS.shuffle_train_data()
-        train_history = model.fit(X, Y, batch_size=128, epochs=1, verbose=1, validation_split=0.2)
-        model.save_weights(os.path.join('models', 'RNN_model%d.h5' % (set_model)))
+    Xf, Yf = DS_f.get_train_data(repeat=True)
+    Xm, Ym = DS_m.get_train_data(repeat=True)
+
+    Xc = np.concatenate((Xf, Xm), axis=2)
+    Yc = copy(Yf)
+
+    del Xf
+    del Yf
+    del Xm
+    del Ym
+    del DS_m
+    del DS_f
+
+    model = Sequential()
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal'), input_shape=(800, 108)))
+    model.add(Dropout(0.4))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal')))
+    model.add(Dropout(0.2))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal')))
+    model.add(Dropout(0.2))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal')))
+    model.add(Dropout(0.2))
+    model.add(TimeDistributed(Dense(64, activation='relu')))
+    model.add(Dropout(0.2))
+    model.add(TimeDistributed(Dense(39, activation='softmax')))
+    model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    print(model.summary())
+
+    filepath = 'models/big_RNN_model.h5'
+    checkpoint = ModelCheckpoint(filepath, monitor='acc', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+    train_history = model.fit(Xc, Yc, validation_split=0.0, epochs=400, batch_size=128, callbacks=callbacks_list, verbose=1)

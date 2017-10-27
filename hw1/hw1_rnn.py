@@ -45,27 +45,28 @@ def output_result(predict, name):
                 if block.count(max_occurred) >= 3:
                     record.append(max_occurred)
                 start += 1
-
-            # print('Index: ', index, 'result: ', record)
             result = ""
             for i in range(len(record)-1):
                 if record[i] != record[i+1]:
                     result += DS_m.num2char[record[i]]
-            f.write('%s,%s\n' % (key[index][0], result[1:]))
-            # print(result)
+            f.write('%s,%s\n' % (name[index][0], result[1:]))
 
 def set_model():
-    feature_dim = 110
+    feature_dim = 108
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=(800, feature_dim)))
-    model.add(Bidirectional(LSTM(128, return_sequences=True)))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal'), input_shape=(800, 108)))
     model.add(Dropout(0.4))
-    model.add(Bidirectional(LSTM(128, return_sequences=True)))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal')))
     model.add(Dropout(0.2))
-    model.add(TimeDistributed(Dense(128, activation='relu')))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal')))
+    model.add(Dropout(0.2))
+    model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_initializer='random_normal')))
+    model.add(Dropout(0.2))
+    model.add(TimeDistributed(Dense(64, activation='relu')))
     model.add(Dropout(0.2))
     model.add(TimeDistributed(Dense(39, activation='softmax')))
     model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    print(model.summary())
     return model
 
 if __name__ == "__main__":
@@ -75,12 +76,12 @@ if __name__ == "__main__":
     DS_f = Dataset(datapath, dataset='fbank')
     DS_m.set_label_dict()
 
-    key, Xft = DS_f.get_test_data(padding=True)
-    key, Xmt = DS_m.get_test_data(padding=True, mark_gender=True)
+    key, Xft = DS_f.get_test_data(repeat=True)
+    key, Xmt = DS_m.get_test_data(repeat=True)
     Xct = np.concatenate((Xft, Xmt), axis=2)
 
     model = set_model()
-    filepath = "models/Rconcat_mg.h5"
+    filepath = "models/big_RNN_model.h5"
     model.load_weights(filepath)
     predict = model.predict(Xct)
 
