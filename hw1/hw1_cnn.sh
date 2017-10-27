@@ -1,1 +1,1 @@
-python3 hw1_cnn.py $1 $2
+python hw1_cnn.py $1 $2
