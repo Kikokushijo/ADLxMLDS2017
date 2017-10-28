@@ -15,15 +15,15 @@
     
 * ### Training Code
     * #### *RNN model*
-        * ##### using model `models/big_RNN_model.h5`
+        * ##### result model: `models/big_RNN_model.h5`
         * `$ python model_rnn.py`
 
     * #### *CNN+RNN model*
-        * ##### using model `models/CRNN_model.h5`
+        * ##### result model: `models/CRNN_model.h5`
         * `$ python model_cnn.py`
     
     * #### *CNN+RNN+CNN model*
-        * ##### using model `models/very_deep_RNN_model.h5`
+        * ##### result model: `models/very_deep_RNN_model.h5`
         * `$ python model_crc.py`
     
     * #### best model
