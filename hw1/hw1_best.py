@@ -6,6 +6,9 @@ from keras.layers.convolutional import Conv1D
 from keras.layers.pooling import MaxPooling1D
 from keras.layers.recurrent import LSTM
 from keras.callbacks import ModelCheckpoint
+import hw1_rnn
+import hw1_cnn
+import hw1_crc
 import numpy as np
 import sys
 import os
@@ -23,7 +26,7 @@ def output_result(predict, name):
             prob_sequence = []
             for v_index, v_i in enumerate(sentence[:length]):
                 for _ in range(1, padding_times):
-                    v_i += sentence[v_index + _ * length]
+                    v_i *= sentence[v_index + _ * length]
                 prob_sequence.append(v_i)
 
             assert len(prob_sequence) == length
@@ -36,7 +39,7 @@ def output_result(predict, name):
 
             assert len(row) == length
 
-            frame_width = 7
+            frame_width = 5
             start = 0
             record = []
             while start + frame_width < len(row):
@@ -80,9 +83,19 @@ if __name__ == "__main__":
     key, Xmt = DS_m.get_test_data(repeat=True)
     Xct = np.concatenate((Xft, Xmt), axis=2)
 
-    model = set_model()
-    filepath = "models/big_RNN_model.h5"
-    model.load_weights(filepath)
-    predict = model.predict(Xct)
+    model1 = hw1_rnn.set_model()
+    filepath1 = "models/big_RNN_model.h5"
+    model1.load_weights(filepath1)
+    predict1 = model1.predict(Xct)
 
-    output_result(predict, key)
+    model2 = hw1_cnn.set_model()
+    filepath2 = 'models/CRNN_model.h5'
+    model2.load_weights(filepath2)
+    predict2 = model2.predict(Xct)
+
+    model3 = hw1_crc.set_model()
+    filepath3 = 'models/very_deep_RNN_model.h5'
+    model3.load_weights(filepath3)
+    predict3 = model3.predict(Xct)
+
+    output_result(predict1 * predict2 * predict3, key)
