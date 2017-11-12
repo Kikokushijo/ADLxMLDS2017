@@ -100,11 +100,20 @@ ENV/
 # mypy
 .mypy_cache/
 
-# ADLHW1 training set
+# ADLHW1
 /hw1_dataset/*
+
+# ADLHW2
+/hw2_dataset/*
+/seq2seq/*
+/recurrentshop/*
+/hw2/output/*
+/hw2/notebook/*
+/hw2/models/*
 
 # ADL output
 *.csv
+*.txt
 
 # jupyter notebook
 *.ipynb
