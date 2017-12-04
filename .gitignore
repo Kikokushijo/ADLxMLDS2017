@@ -111,6 +111,13 @@ ENV/
 /hw2/notebook/*
 /hw2/models/*
 
+# ADLHW3
+/hw3/test.py
+/hw3/environment.py
+/hw3/agent_dir/agent.py
+/hw3/atari_wrapper.py
+/hw3/main.py
+
 # ADL output
 *.csv
 *.txt
