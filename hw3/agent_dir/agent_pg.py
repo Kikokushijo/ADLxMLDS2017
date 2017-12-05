@@ -17,8 +17,8 @@ class Agent_PG(Agent):
         super(Agent_PG, self).__init__(env)
         
         self.state_size = 6400
-        self.episode = 0
-        self.max_episode = 1000
+        self.episode = 1000
+        self.max_episode = 10000
         self.states = []
         self.gradients = []
         self.rewards = []
