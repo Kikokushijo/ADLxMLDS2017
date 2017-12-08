@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.autograd import Variable
+import torch.autograd as autograd
 from torch.distributions import Categorical
 
 import scipy.misc
@@ -56,14 +56,14 @@ class Agent_PG(Agent):
         # build model
 
         self.policy_network = PolicyNetwork()
-        if os.path.isfile('pq_record/pg.pkl'):
+        if os.path.isfile('pg_record/pg.pkl'):
             print('loading trained model')
-            self.policy_network.load_state_dict(torch.load('pq_record/pg.pkl'))
+            self.policy_network.load_state_dict(torch.load('pg_record/pg.pkl'))
         self.opt = optim.RMSprop(self.policy_network.parameters(), lr=self.lr, weight_decay=self.decay_rate)
 
         # log
 
-        self.rw_log = open('pq_record/pq_record.csv', 'a')
+        self.rw_log = open('pg_record/pg_record.csv', 'a')
 
     def init_game_setting(self):
         """
@@ -120,7 +120,7 @@ class Agent_PG(Agent):
 
                 if done:
                     print('Eps-reward: %f.' % (self.eps_reward))
-                    self.rw_log.write('%d, %f\n' % (num_episode, self.eps_reward))
+                    # self.rw_log.write('%d, %f\n' % (num_episode, self.eps_reward))
                     self.eps_reward = 0
                     break
 
@@ -128,7 +128,8 @@ class Agent_PG(Agent):
                 self.update_param()
 
             if num_episode % 50 == 0:
-                torch.save(self.policy_network.state_dict(), 'pq_record/pg.pkl')
+                # torch.save(self.policy_network.state_dict(), 'pq_record/pg.pkl')
+                pass
 
 
     def make_action(self, state, test=True):
@@ -182,3 +183,7 @@ class PolicyNetwork(nn.Module):
         # x = x.view(x.size(0), -1)
         # action_scores = self.affine1(x)
         return F.softmax(action_scores, dim=1)
+
+class Variable(autograd.Variable):
+    def __init__(self, data, *args, **kwargs):
+        super(Variable, self).__init__(data.cuda(), *args, **kwargs)
