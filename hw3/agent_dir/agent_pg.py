@@ -13,7 +13,7 @@ import numpy as np
 from itertools import count
 import os
 
-def prepro(I, image_size=[80,80]):
+def prepro(o, image_size=[80,80]):
     """
     Call this function to preprocess RGB image to grayscale image if necessary
     This preprocessing code is from
@@ -26,17 +26,15 @@ def prepro(I, image_size=[80,80]):
         Grayscale image, shape: (80, 80, 1)
     
     """
-    # y = 0.2126 * o[:, :, 0] + 0.7152 * o[:, :, 1] + 0.0722 * o[:, :, 2]
-    # y = y.astype(np.uint8)
-    # resized = scipy.misc.imresize(y, image_size)
-    # return np.expand_dims(resized.astype(np.float32),axis=2).reshape(6400)
 
-    I = I[35:195]
-    I = I[::2, ::2, 0]
-    I[I == 144] = 0
-    I[I == 109] = 0
-    I[I != 0 ] = 1
-    return I.astype(np.float).ravel()
+    # Another preprocessing method
+
+    o = o[35:195]
+    o = o[::2, ::2, 0]
+    o[o == 144] = 0
+    o[o == 109] = 0
+    o[o != 0 ] = 1
+    return o.astype(np.float).reshape(-1)
 
 
 class Agent_PG(Agent):
@@ -47,23 +45,25 @@ class Agent_PG(Agent):
         """
 
         super(Agent_PG, self).__init__(env)
-        self.policy_network = PolicyNetwork()
-        if os.path.isfile('pq_record/pg.pkl'):
-            print('Load Policy Network parametets ...')
-            self.policy_network.load_state_dict(torch.load('pq_record/pg.pkl'))
-        self.opt = optim.RMSprop(self.policy_network.parameters(), lr=1e-4, weight_decay=0.99)
+
+        # hyperparameter
+
         self.gamma = 0.99
         self.batch_size = 1
-        self.env.seed(87)
+        self.lr = 1e-4
+        self.decay_rate = 0.99
 
-        if args.test_pg:
-            #you can load your model here
+        # build model
+
+        self.policy_network = PolicyNetwork()
+        if os.path.isfile('pq_record/pg.pkl'):
             print('loading trained model')
+            self.policy_network.load_state_dict(torch.load('pq_record/pg.pkl'))
+        self.opt = optim.RMSprop(self.policy_network.parameters(), lr=self.lr, weight_decay=self.decay_rate)
 
-        ##################
-        # YOUR CODE HERE #
-        ##################
+        # log
 
+        self.rw_log = open('pq_record/pq_record.csv', 'a')
 
     def init_game_setting(self):
         """
@@ -72,72 +72,62 @@ class Agent_PG(Agent):
         Put anything you want to initialize if necessary
 
         """
-        ##################
-        # YOUR CODE HERE #
-        ##################
         pass
 
-    def finish_episode(self):
-        R = 0
-        policy_loss = []
-        rewards = []
-        for r in self.policy_network.rewards[::-1]:
-            R = r + self.gamma * R
-            rewards.insert(0, R)
-        # turn rewards to pytorch tensor and standardize
+    def update_param(self):
+
+        accumulated = 0
+        rewards = []        
+        for r in reversed(self.policy_network.rewards):
+            accumulated = r + self.gamma * accumulated
+            rewards.append(accumulated)
+        rewards.reverse()
+
+        # normalize
+
         rewards = torch.Tensor(rewards)
         rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float32).eps)
-        
+
+        # calculate grad(J)
+
+        policy_loss = []
         for log_prob, reward in zip(self.policy_network.saved_log_probs, rewards):
             policy_loss.append(-log_prob * reward)
+
+        # theta = theta + alpha * grad(J)
 
         self.opt.zero_grad()
         policy_loss = torch.cat(policy_loss).sum()
         policy_loss.backward()
         self.opt.step()
 
-        # clean rewards and saved_actions
-        del self.policy_network.rewards[:]
-        del self.policy_network.saved_log_probs[:]
+        self.policy_network.rewards = []
+        self.policy_network.saved_log_probs = []
 
     def train(self):
         """
         Implement your training algorithm here
         """
-        ##################
-        # YOUR CODE HERE #
-        ##################
-        running_reward = None
-        reward_sum = 0
-        f = open('pq_record/pq_record.csv', 'a')
-        for i_episode in count(1):
+
+        self.eps_reward = 0
+        for num_episode in count(1):
             state = self.env.reset()
             for t in range(10000):
                 action = self.make_action(state)
-                action = action + 1
                 state, reward, done, _ = self.env.step(action)
-                reward_sum += reward
-                
+                self.eps_reward += reward
                 self.policy_network.rewards.append(reward)
+
                 if done:
-                    # tracking log
-                    running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
-                    print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
-                    f.write('%d, %f, %f\n' % (i_episode, reward_sum, running_reward))
-                    reward_sum = 0
+                    print('Eps-reward: %f.' % (self.eps_reward))
+                    self.rw_log.write('%d, %f\n' % (num_episode, self.eps_reward))
+                    self.eps_reward = 0
                     break
-                    
-                # if reward != 0:
-                #     print('ep %d: game finished, reward: %f' % (i_episode, reward) + ('' if reward == -1 else ' !!!!!!!'))
 
-            # use policy gradient update model weights
-            if i_episode % self.batch_size == 0:
-                # print('ep %d: policy network parameters updating...' % (i_episode))
-                self.finish_episode()
+            if num_episode % self.batch_size == 0:
+                self.update_param()
 
-            # Save model in every 50 episode
-            if i_episode % 50 == 0:
-                print('ep %d: model saving...' % (i_episode))
+            if num_episode % 50 == 0:
                 torch.save(self.policy_network.state_dict(), 'pq_record/pg.pkl')
 
 
@@ -153,18 +143,13 @@ class Agent_PG(Agent):
             action: int
                 the predicted action from trained model
         """
-        ##################
-        # YOUR CODE HERE #
-        ##################
-
         state = prepro(state)
         state = torch.from_numpy(state).float().unsqueeze(0)
         probs = self.policy_network(Variable(state))
         m = Categorical(probs)
         action = m.sample()
         self.policy_network.saved_log_probs.append(m.log_prob(action))
-        # print(probs)
-        return action.data[0]
+        return action.data[0] + 1
 
 class PolicyNetwork(nn.Module):
     def __init__(self):
