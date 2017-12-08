@@ -50,20 +50,21 @@ class Agent_PG(Agent):
 
         self.gamma = 0.99
         self.batch_size = 1
-        self.lr = 1e-4
+        self.lr = 1e-3
         self.decay_rate = 0.99
 
         # build model
 
         self.policy_network = PolicyNetwork()
-        if os.path.isfile('pg_record/pg.pkl'):
+        self.policy_network.cuda()
+        if os.path.isfile('pg_record/pg_fast.pkl'):
             print('loading trained model')
-            self.policy_network.load_state_dict(torch.load('pg_record/pg.pkl'))
+            self.policy_network.load_state_dict(torch.load('pg_record/pg_fast.pkl'))
         self.opt = optim.RMSprop(self.policy_network.parameters(), lr=self.lr, weight_decay=self.decay_rate)
 
         # log
 
-        self.rw_log = open('pg_record/pg_record.csv', 'a')
+        self.rw_log = open('pg_record/pg_fast_record.csv', 'a')
 
     def init_game_setting(self):
         """
@@ -83,9 +84,12 @@ class Agent_PG(Agent):
             rewards.append(accumulated)
         rewards.reverse()
 
+        if len(rewards) > 3000:
+            rewards = rewards[:3000]
+
         # normalize
 
-        rewards = torch.Tensor(rewards)
+        rewards = torch.Tensor(rewards).cuda()
         rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float32).eps)
 
         # calculate grad(J)
@@ -110,6 +114,8 @@ class Agent_PG(Agent):
         """
 
         self.eps_reward = 0
+        self.avg_reward = -21
+        self.rewards = []
         for num_episode in count(1):
             state = self.env.reset()
             for t in range(10000):
@@ -119,16 +125,24 @@ class Agent_PG(Agent):
                 self.policy_network.rewards.append(reward)
 
                 if done:
-                    print('Eps-reward: %f.' % (self.eps_reward))
-                    # self.rw_log.write('%d, %f\n' % (num_episode, self.eps_reward))
+                    self.avg_reward = 0.98 * self.avg_reward + 0.02 * self.eps_reward
+                    print('Episode: %d, Eps-reward: %f. Running-reward: %f' % (num_episode, self.eps_reward, self.avg_reward))
+                    self.rw_log.write('%d, %f, %f\n' % (num_episode, self.eps_reward, self.avg_reward))
+                    self.rewards.append(self.eps_reward)
                     self.eps_reward = 0
+                    
+
+                    if num_episode % 30 == 0:
+                        print('Recent 30 Episode: %f' % (sum(self.rewards) / 30))
+                        self.rewards = []
                     break
 
             if num_episode % self.batch_size == 0:
                 self.update_param()
 
             if num_episode % 50 == 0:
-                # torch.save(self.policy_network.state_dict(), 'pq_record/pg.pkl')
+                print('Save model')
+                torch.save(self.policy_network.state_dict(), 'pg_record/pg_fast.pkl')
                 pass
 
 
@@ -146,7 +160,7 @@ class Agent_PG(Agent):
         """
         state = prepro(state)
         state = torch.from_numpy(state).float().unsqueeze(0)
-        probs = self.policy_network(Variable(state))
+        probs = self.policy_network(Variable(state).cuda())
         m = Categorical(probs)
         action = m.sample()
         self.policy_network.saved_log_probs.append(m.log_prob(action))
