@@ -11,6 +11,7 @@ import scipy.misc
 import numpy as np
 
 from itertools import count
+from copy import copy
 import os
 
 def prepro(o, image_size=[80,80]):
@@ -29,13 +30,16 @@ def prepro(o, image_size=[80,80]):
 
     # Another preprocessing method
 
-    o = o[35:195]
-    o = o[::2, ::2, 0]
-    o[o == 144] = 0
-    o[o == 109] = 0
-    o[o != 0 ] = 1
-    return o.astype(np.float).reshape(-1)
-
+    # o = o[35:195]
+    # o = o[::2, ::2, 0]
+    # o[o == 144] = 0
+    # o[o == 109] = 0
+    # o[o != 0 ] = 1
+    # return o.astype(np.float).reshape(-1)
+    y = 0.2126 * o[:, :, 0] + 0.7152 * o[:, :, 1] + 0.0722 * o[:, :, 2]
+    y = y.astype(np.uint8)
+    resized = scipy.misc.imresize(y, image_size)
+    return np.expand_dims(resized.astype(np.float32),axis=2)
 
 class Agent_PG(Agent):
     def __init__(self, env, args):
@@ -50,21 +54,27 @@ class Agent_PG(Agent):
 
         self.gamma = 0.99
         self.batch_size = 1
-        self.lr = 1e-3
+        self.lr = 1e-4
         self.decay_rate = 0.99
+        self.state = None
 
         # build model
 
         self.policy_network = PolicyNetwork()
-        self.policy_network.cuda()
-        if os.path.isfile('pg_record/pg_fast.pkl'):
+
+
+        # CPU vs GPU
+
+        # self.policy_network.cuda()
+        self.policy_network
+        if os.path.isfile('pg_record/pg_CNN.pkl'):
             print('loading trained model')
-            self.policy_network.load_state_dict(torch.load('pg_record/pg_fast.pkl'))
+            self.policy_network.load_state_dict(torch.load('pg_record/pg_CNN.pkl'))
         self.opt = optim.RMSprop(self.policy_network.parameters(), lr=self.lr, weight_decay=self.decay_rate)
 
         # log
 
-        self.rw_log = open('pg_record/pg_fast_record.csv', 'a')
+        self.rw_log = open('pg_record/pg_CNN.csv', 'a')
 
     def init_game_setting(self):
         """
@@ -73,6 +83,9 @@ class Agent_PG(Agent):
         Put anything you want to initialize if necessary
 
         """
+
+        self.state = None
+
         pass
 
     def update_param(self):
@@ -80,16 +93,20 @@ class Agent_PG(Agent):
         accumulated = 0
         rewards = []        
         for r in reversed(self.policy_network.rewards):
+            if r != 0:
+                accumulated = 0
             accumulated = r + self.gamma * accumulated
             rewards.append(accumulated)
         rewards.reverse()
 
-        if len(rewards) > 3000:
-            rewards = rewards[:3000]
+        print('Total Action Steps', len(rewards))
+        # if len(rewards) > 10500:
+        #     rewards = rewards[:10500]
 
         # normalize
 
-        rewards = torch.Tensor(rewards).cuda()
+        # rewards = torch.Tensor(rewards).cuda()
+        rewards = torch.Tensor(rewards)
         rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float32).eps)
 
         # calculate grad(J)
@@ -105,8 +122,8 @@ class Agent_PG(Agent):
         policy_loss.backward()
         self.opt.step()
 
-        self.policy_network.rewards = []
-        self.policy_network.saved_log_probs = []
+        del self.policy_network.rewards[:]
+        del self.policy_network.saved_log_probs[:]
 
     def train(self):
         """
@@ -118,7 +135,8 @@ class Agent_PG(Agent):
         self.rewards = []
         for num_episode in count(1):
             state = self.env.reset()
-            for t in range(10000):
+            self.init_game_setting()
+            for t in range(10500):
                 action = self.make_action(state)
                 state, reward, done, _ = self.env.step(action)
                 self.eps_reward += reward
@@ -142,11 +160,12 @@ class Agent_PG(Agent):
 
             if num_episode % 50 == 0:
                 print('Save model')
-                torch.save(self.policy_network.state_dict(), 'pg_record/pg_fast.pkl')
+                torch.save(self.policy_network.state_dict(), 'pg_record/pg_CNN.pkl')
+                print('Complete Saving Model')
                 pass
 
 
-    def make_action(self, state, test=True):
+    def make_action(self, state, test=False):
         """
         Return predicted action of your agent
 
@@ -159,45 +178,66 @@ class Agent_PG(Agent):
                 the predicted action from trained model
         """
         state = prepro(state)
-        state = torch.from_numpy(state).float().unsqueeze(0)
-        probs = self.policy_network(Variable(state).cuda())
-        m = Categorical(probs)
-        action = m.sample()
-        self.policy_network.saved_log_probs.append(m.log_prob(action))
-        return action.data[0] + 1
+        if self.state is None:
+            self.state = state
+            state_dif = state
+            # state_dif = self.state - state
+        else:
+            state_dif = self.state - state
+        self.state = state
+        tmp = torch.from_numpy(state_dif).float().unsqueeze(0)
+
+        # CPU vs GPU
+
+        # probs = self.policy_network(Variable(tmp).cuda())
+        probs = self.policy_network(Variable(tmp))
+        if test:
+            prob, action = torch.max(probs, 1)
+            return action.data[0] + 1
+        else:
+            
+            m = Categorical(probs)
+            action = m.sample()
+            self.policy_network.saved_log_probs.append(m.log_prob(action))
+            return action.data[0] + 1
 
 class PolicyNetwork(nn.Module):
     def __init__(self):
         super(PolicyNetwork, self).__init__()
 
-        # self.conv1 = nn.Sequential(
-        #     nn.Conv2d(1, 16, 5, 1, 2),
-        #     nn.ReLU(),
-        #     nn.MaxPool2d(2),
-        # )
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(in_channels=1,
+                      out_channels=16,
+                      kernel_size=8,
+                      stride=4),
+            nn.ReLU(),
+        )
 
-        # self.conv2 = nn.Sequential(
-        #     nn.Conv2d(16, 32, 5, 1, 2),
-        #     nn.ReLU(),
-        #     nn.MaxPool2d(2),
-        # )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(in_channels=16,
+                      out_channels=32,
+                      kernel_size=4,
+                      stride=2),
+            nn.ReLU(),
+        )
 
-        # self.affine1 = nn.Linear(32 * 20 * 20, 3)
+        self.affine1 = nn.Linear(32 * 8 * 8, 128)
+        self.affine2 = nn.Linear(128, 3)
 
-        self.affine1 = nn.Linear(6400, 64)
-        self.affine2 = nn.Linear(64, 3)
         self.saved_log_probs = []
         self.rewards = []
         
     def forward(self, x):
+        x = self.conv1(x.view(-1, 1, 80, 80))
+        x = self.conv2(x)
+        x = x.view(x.size(0), -1)
         x = F.relu(self.affine1(x))
-        action_scores = self.affine2(x)
-        # x = self.conv1(x.view(-1, 1, 80, 80))
-        # x = self.conv2(x)
-        # x = x.view(x.size(0), -1)
-        # action_scores = self.affine1(x)
-        return F.softmax(action_scores, dim=1)
+        return F.softmax(self.affine2(x))
+
+# class Variable(autograd.Variable):
+#     def __init__(self, data, *args, **kwargs):
+#         super(Variable, self).__init__(data.cuda(), *args, **kwargs)
 
 class Variable(autograd.Variable):
     def __init__(self, data, *args, **kwargs):
-        super(Variable, self).__init__(data.cuda(), *args, **kwargs)
+        super(Variable, self).__init__(data, *args, **kwargs)

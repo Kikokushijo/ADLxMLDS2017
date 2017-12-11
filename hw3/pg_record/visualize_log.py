@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
+import sys
 
 if __name__ == '__main__':
     rewards = []
-    average_len = 30
-    with open('pg_record/pg_record.csv', 'r') as f:
+    average_len = 200
+    with open(sys.argv[1], 'r') as f:
         for line in f:
             _, reward, _ = line.strip('\n').split(',')
             rewards.append(float(reward))
