@@ -14,6 +14,9 @@ from itertools import count
 from copy import copy
 import os
 
+useGPU = True
+
+
 def prepro(o, image_size=[80,80]):
     """
     Call this function to preprocess RGB image to grayscale image if necessary
@@ -64,9 +67,9 @@ class Agent_PG(Agent):
 
 
         # CPU vs GPU
+        if useGPU:
+            self.policy_network.cuda()
 
-        # self.policy_network.cuda()
-        self.policy_network
         if os.path.isfile('pg_record/pg_CNN.pkl'):
             print('loading trained model')
             self.policy_network.load_state_dict(torch.load('pg_record/pg_CNN.pkl'))
@@ -105,8 +108,11 @@ class Agent_PG(Agent):
 
         # normalize
 
-        # rewards = torch.Tensor(rewards).cuda()
-        rewards = torch.Tensor(rewards)
+        if useGPU:
+            rewards = torch.Tensor(rewards).cuda()
+        else:
+            rewards = torch.Tensor(rewards)
+
         rewards = (rewards - rewards.mean()) / (rewards.std() + np.finfo(np.float32).eps)
 
         # calculate grad(J)
@@ -188,9 +194,10 @@ class Agent_PG(Agent):
         tmp = torch.from_numpy(state_dif).float().unsqueeze(0)
 
         # CPU vs GPU
-
-        # probs = self.policy_network(Variable(tmp).cuda())
-        probs = self.policy_network(Variable(tmp))
+        if useGPU:
+            probs = self.policy_network(Variable(tmp).cuda())
+        else:
+            probs = self.policy_network(Variable(tmp))
         if test:
             prob, action = torch.max(probs, 1)
             return action.data[0] + 1
