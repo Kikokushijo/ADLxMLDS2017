@@ -109,11 +109,12 @@ class Agent_DQN(Agent):
         next_state_values[non_final_mask] = self.Q_target(non_final_next_states).max(1)[0]
         next_state_values.volatile = False
         expected_state_action_values = (next_state_values * self.gamma) + reward_batch
-        loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
+        # loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
+        loss = nn.MSELoss()
         self.opt.zero_grad()
-        loss.backward()
-        for param in self.Q.parameters():
-            param.grad.data.clamp_(-1, 1)
+        loss(state_action_values, expected_state_action_values).backward()
+        # for param in self.Q.parameters():
+        #     param.grad.data.clamp_(-1, 1)
         self.opt.step()
 
     def train(self):
@@ -140,11 +141,16 @@ class Agent_DQN(Agent):
 
                 if self.time % self.update_target_step == 0:
                     self.Q_target.load_state_dict(self.Q.state_dict())
-                    self.
+                    print('Save model')
+                    torch.save(self.Q.state_dict(), 'dqn_record/Q.pkl')
+                    print('Complete Saving Model')
 
                 if self.time % 1000 == 0:
                     print('Now playing %d steps.' % (self.time))
 
+            with open('dqn_record/dqn.csv', 'a') as f:
+                f.write("%d, %d\n" % (self.time, self.eps_reward))
+            
             self.rewards.append(self.eps_reward)
             if num_episode % 100 == 0:
                 print('Recent 100 episode: %f' % (sum(self.rewards) / 100))
@@ -165,14 +171,16 @@ class Agent_DQN(Agent):
                 the predicted action from trained model
         """
         # obs = np.transpose(observation, (2, 0, 1))
+        obs = torch.from_numpy(np.array([observation]))
         if not test:
             rd = random.random()
             eps = self.schedule.value(self.time)
-            if rd > eps:
-                obs = torch.from_numpy(np.array([observation]))
+            if rd < eps:
                 return int(self.Q(Variable(obs, volatile=True).type(Tensor)).data.max(1)[1].view(1, 1))
             else:
                 return int(LongTensor([[random.randrange(self.num_actions)]]))
+        else:
+            return int(self.Q(Variable(obs, volatile=True).type(Tensor)).data.max(1)[1].view(1, 1))
 
         return self.env.get_random_action()
 
