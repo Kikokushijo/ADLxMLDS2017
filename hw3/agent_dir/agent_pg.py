@@ -14,7 +14,7 @@ from itertools import count
 from copy import copy
 import os
 
-useGPU = True
+useGPU = torch.cuda.is_available()
 
 
 def prepro(o, image_size=[80,80]):
@@ -31,14 +31,8 @@ def prepro(o, image_size=[80,80]):
     
     """
 
-    # Another preprocessing method
+    # TA's preprocessing method
 
-    # o = o[35:195]
-    # o = o[::2, ::2, 0]
-    # o[o == 144] = 0
-    # o[o == 109] = 0
-    # o[o != 0 ] = 1
-    # return o.astype(np.float).reshape(-1)
     y = 0.2126 * o[:, :, 0] + 0.7152 * o[:, :, 1] + 0.0722 * o[:, :, 2]
     y = y.astype(np.uint8)
     resized = scipy.misc.imresize(y, image_size)
@@ -68,7 +62,7 @@ class Agent_PG(Agent):
 
         # CPU vs GPU
         if useGPU:
-            self.policy_network.cuda()
+            self.policy_network = self.policy_network.cuda()
 
         if os.path.isfile('PG.pkl'):
             print('loading trained model')
@@ -103,8 +97,6 @@ class Agent_PG(Agent):
         rewards.reverse()
 
         print('Total Action Steps', len(rewards))
-        # if len(rewards) > 10500:
-        #     rewards = rewards[:10500]
 
         # normalize
 
@@ -187,9 +179,9 @@ class Agent_PG(Agent):
         if self.state is None:
             self.state = state
             state_dif = state
-            # state_dif = self.state - state
         else:
             state_dif = self.state - state
+
         self.state = state
         tmp = torch.from_numpy(state_dif).float().unsqueeze(0)
 
@@ -241,10 +233,9 @@ class PolicyNetwork(nn.Module):
         x = F.relu(self.affine1(x))
         return F.softmax(self.affine2(x))
 
-# class Variable(autograd.Variable):
-#     def __init__(self, data, *args, **kwargs):
-#         super(Variable, self).__init__(data.cuda(), *args, **kwargs)
-
 class Variable(autograd.Variable):
     def __init__(self, data, *args, **kwargs):
-        super(Variable, self).__init__(data, *args, **kwargs)
+        if useGPU:
+            super(Variable, self).__init__(data.cuda(), *args, **kwargs)
+        else:
+            super(Variable, self).__init__(data.cuda(), *args, **kwargs)
