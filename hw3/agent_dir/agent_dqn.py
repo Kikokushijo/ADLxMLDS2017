@@ -61,9 +61,9 @@ class Agent_DQN(Agent):
             self.Q = self.Q.cuda()
             self.Q_target = self.Q_target.cuda()
             self.loss_func = self.loss_func.cuda()
-        if os.path.isfile('dqn_record/Q.pkl'):
+        if os.path.isfile('DQN.pkl'):
             print('loading trained model')
-            self.Q.load_state_dict(torch.load('dqn_record/Q.pkl'))
+            self.Q.load_state_dict(torch.load('DQN.pkl'))
             self.Q_target.load_state_dict(self.Q.state_dict())
 
         # initialize
@@ -141,7 +141,7 @@ class Agent_DQN(Agent):
 
                 if self.time % self.update_target_step == 0:
                     self.Q_target.load_state_dict(self.Q.state_dict())
-                    torch.save(self.Q.state_dict(), 'dqn_record/Q.pkl')
+                    torch.save(self.Q.state_dict(), 'DQN.pkl')
 
                 if self.time % 1000 == 0:
                     print('Now playing %d steps.' % (self.time))

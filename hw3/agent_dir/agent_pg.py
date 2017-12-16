@@ -70,9 +70,9 @@ class Agent_PG(Agent):
         if useGPU:
             self.policy_network.cuda()
 
-        if os.path.isfile('pg_record/pg_CNN.pkl'):
+        if os.path.isfile('PG.pkl'):
             print('loading trained model')
-            self.policy_network.load_state_dict(torch.load('pg_record/pg_CNN.pkl'))
+            self.policy_network.load_state_dict(torch.load('PG.pkl'))
         self.opt = optim.RMSprop(self.policy_network.parameters(), lr=self.lr, weight_decay=self.decay_rate)
 
         # log
@@ -166,7 +166,7 @@ class Agent_PG(Agent):
 
             if num_episode % 50 == 0:
                 print('Save model')
-                torch.save(self.policy_network.state_dict(), 'pg_record/pg_CNN.pkl')
+                torch.save(self.policy_network.state_dict(), 'PG.pkl')
                 print('Complete Saving Model')
                 pass
 
