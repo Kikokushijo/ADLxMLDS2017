@@ -15,4 +15,6 @@ if __name__ == '__main__':
 
     plt.plot(range(len(rewards) - average_len), avg_rewards)
     plt.title('Policy Gradient on Pong')
+    plt.xlabel('number of episodes')
+    plt.ylabel('average reward in last 200 episodes')
     plt.show()
