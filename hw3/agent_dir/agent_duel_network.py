@@ -61,9 +61,9 @@ class Agent_DQN(Agent):
             self.Q = self.Q.cuda()
             self.Q_target = self.Q_target.cuda()
             self.loss_func = self.loss_func.cuda()
-        if os.path.isfile('dqn_record/Q.pkl'):
+        if os.path.isfile('dqn_record/duel.pkl'):
             print('loading trained model')
-            self.Q.load_state_dict(torch.load('dqn_record/Q.pkl'))
+            self.Q.load_state_dict(torch.load('dqn_record/duel.pkl'))
             self.Q_target.load_state_dict(self.Q.state_dict())
 
         # initialize
@@ -108,8 +108,6 @@ class Agent_DQN(Agent):
         q_eval = self.Q(b_s).gather(1, b_a)
         q_next = self.Q_target(b_s_).detach()
         q_next.volatile = False
-        # values, indices = torch.max(q_next, 0)
-        # print(values, indices, q_next)
         q_target = b_r + self.gamma * q_next.max(1, keepdim=True)[0] * b_nd
 
         loss = self.loss_func(q_eval, q_target)
@@ -141,14 +139,14 @@ class Agent_DQN(Agent):
 
                 if self.time % self.update_target_step == 0:
                     self.Q_target.load_state_dict(self.Q.state_dict())
-                    torch.save(self.Q.state_dict(), 'dqn_record/Q.pkl')
+                    torch.save(self.Q.state_dict(), 'dqn_record/duel.pkl')
 
                 if self.time % 1000 == 0:
                     print('Now playing %d steps.' % (self.time))
 
             print('Step: %d, Episode: %d, Episode Reward: %f' % (self.time, num_episode, int(self.eps_reward)))
 
-            with open('dqn_record/dqn.csv', 'a') as f:
+            with open('dqn_record/duel.csv', 'a') as f:
                 f.write("%d, %d\n" % (self.time, self.eps_reward))
             
             self.rewards.append(self.eps_reward)
@@ -211,6 +209,7 @@ class DQN(nn.Module):
     def __init__(self, num_actions):
 
         super(DQN, self).__init__()
+        self.num_actions = num_actions
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels=4, 
@@ -236,19 +235,28 @@ class DQN(nn.Module):
             nn.ReLU(),
         )
 
-        layer4 = nn.Sequential()
-        layer4.add_module('fc1', nn.Linear(64 * 7 * 7, 512))
-        layer4.add_module('lrelu1', nn.LeakyReLU())
-        layer4.add_module('fc2', nn.Linear(512, num_actions))
-        self.layer4 = layer4
+        self.layer_adv = nn.Sequential(
+            nn.Linear(64 * 7 * 7, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_actions)
+        )
+
+        self.layer_val = nn.Sequential(
+            nn.Linear(64 * 7 * 7, 512),
+            nn.ReLU(),
+            nn.Linear(512, 1)
+        )
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
         x = self.conv3(x)
-        fc_input = x.view(x.size(0), -1)
-        fc_out = self.layer4(fc_input)
-        return fc_out
+        x = x.view(x.size(0), -1)
+
+        adv = self.layer_adv(x)
+        val = self.layer_val(x).expand(x.size(0), self.num_actions)
+        x = val + adv - adv.mean(1).unsqueeze(1).expand(x.size(0), self.num_actions)
+        return x
 
 class ExplorationSchedule(object):
     def __init__(self, timestep=1e6, final=0.95, initial=0):

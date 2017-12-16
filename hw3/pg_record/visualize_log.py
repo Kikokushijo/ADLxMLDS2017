@@ -14,4 +14,5 @@ if __name__ == '__main__':
         avg_rewards.append(sum(rewards[pos:pos+average_len]) / average_len)
 
     plt.plot(range(len(rewards) - average_len), avg_rewards)
+    plt.title('Policy Gradient on Pong')
     plt.show()

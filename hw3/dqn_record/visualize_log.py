@@ -17,4 +17,7 @@ if __name__ == '__main__':
 
 
     plt.plot(steps[average_len:], avg_rewards)
+    plt.xlabel('number of time steps')
+    plt.ylabel('average reward in last %d episodes' % (average_len))
+    plt.title('DQN on Breakout')
     plt.show()

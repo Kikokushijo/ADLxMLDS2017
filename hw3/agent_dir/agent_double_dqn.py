@@ -61,9 +61,9 @@ class Agent_DQN(Agent):
             self.Q = self.Q.cuda()
             self.Q_target = self.Q_target.cuda()
             self.loss_func = self.loss_func.cuda()
-        if os.path.isfile('dqn_record/Q.pkl'):
+        if os.path.isfile('dqn_record/double_DQN.pkl'):
             print('loading trained model')
-            self.Q.load_state_dict(torch.load('dqn_record/Q.pkl'))
+            self.Q.load_state_dict(torch.load('dqn_record/double_DQN.pkl'))
             self.Q_target.load_state_dict(self.Q.state_dict())
 
         # initialize
@@ -91,12 +91,14 @@ class Agent_DQN(Agent):
             b_r.append(r)
             b_s_.append(s_)
             b_nd.append(d)
+        # print(b_nd)
 
         b_s = Variable(torch.FloatTensor(np.array(b_s)).transpose(1, 3))
         b_a = Variable(torch.LongTensor(np.array(b_a)).unsqueeze(1))
         b_r = Variable(torch.FloatTensor(np.array(b_r)).unsqueeze(1))
         b_s_ = Variable(torch.FloatTensor(np.array(b_s_)).transpose(1, 3))
         b_nd = Variable(torch.Tensor(b_nd).unsqueeze(1))
+        # print(b_nd)
 
         if use_cuda:
             b_s = b_s.cuda()
@@ -108,9 +110,13 @@ class Agent_DQN(Agent):
         q_eval = self.Q(b_s).gather(1, b_a)
         q_next = self.Q_target(b_s_).detach()
         q_next.volatile = False
-        # values, indices = torch.max(q_next, 0)
-        # print(values, indices, q_next)
-        q_target = b_r + self.gamma * q_next.max(1, keepdim=True)[0] * b_nd
+
+
+        values, indices = torch.max(self.Q(b_s_), 1)
+        q_true = q_next.gather(1, indices.unsqueeze(1))
+        
+        # q_target = b_r + self.gamma * q_next.max(1, keepdim=True)[0] * b_nd
+        q_target = b_r + self.gamma * q_true * b_nd
 
         loss = self.loss_func(q_eval, q_target)
         self.opt.zero_grad()
@@ -141,14 +147,14 @@ class Agent_DQN(Agent):
 
                 if self.time % self.update_target_step == 0:
                     self.Q_target.load_state_dict(self.Q.state_dict())
-                    torch.save(self.Q.state_dict(), 'dqn_record/Q.pkl')
+                    torch.save(self.Q.state_dict(), 'dqn_record/double_DQN.pkl')
 
                 if self.time % 1000 == 0:
                     print('Now playing %d steps.' % (self.time))
 
             print('Step: %d, Episode: %d, Episode Reward: %f' % (self.time, num_episode, int(self.eps_reward)))
 
-            with open('dqn_record/dqn.csv', 'a') as f:
+            with open('dqn_record/double_DQN.csv', 'a') as f:
                 f.write("%d, %d\n" % (self.time, self.eps_reward))
             
             self.rewards.append(self.eps_reward)
@@ -157,6 +163,9 @@ class Agent_DQN(Agent):
                 print('Recent 100 episode: %f' % (sum(self.rewards) / 100))
                 print('---')
                 self.rewards = []
+
+            if self.time >= 3000000:
+                break
             
 
 
