@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch.autograd as autograd
-from torch.distributions import Categorical
+# from torch.distributions import Categorical
 
 import scipy.misc
 import numpy as np
@@ -71,7 +71,7 @@ class Agent_PG(Agent):
 
         # log
 
-        self.rw_log = open('pg_record/pg_CNN.csv', 'a')
+        # self.rw_log = open('pg_record/pg_CNN.csv', 'a')
 
     def init_game_setting(self):
         """
