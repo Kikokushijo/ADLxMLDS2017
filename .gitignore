@@ -118,6 +118,9 @@ ENV/
 /hw3/atari_wrapper.py
 /hw3/main.py
 
+# ADLHW4
+/hw4_dataset/*
+
 # ADL output
 *.csv
 *.txt
