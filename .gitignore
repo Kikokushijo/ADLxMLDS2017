@@ -120,6 +120,8 @@ ENV/
 
 # ADLHW4
 /hw4_dataset/*
+/hw4/predict
+/hw4/save*/*
 
 # ADL output
 *.csv

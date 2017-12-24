@@ -10,7 +10,7 @@ with open('my_tag/common.json', 'r') as f:
 # face = misc.imread('../hw4_dataset/faces/1.jpg')
 # print(face.shape, face.dtype)
 
-for key, value in common_dict.items():
+for key in range(33431):
     # print(key)
     img = skimage.io.imread('../hw4_dataset/faces/%s.jpg' % key)
     img = skimage.transform.resize(img, (64, 64))
