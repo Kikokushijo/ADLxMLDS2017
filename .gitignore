@@ -122,6 +122,7 @@ ENV/
 /hw4_dataset/*
 /hw4/predict
 /hw4/save*/*
+/hw4/samples/*.jpg
 
 # ADL output
 *.csv
