@@ -53,16 +53,41 @@ if __name__ == '__main__':
     generator = get_gen_normal()
     generator.load_weights('generator.hdf5')
 
+    try:
+        os.makedirs(img_save_dir)
+    except:
+        pass
+
+    # seeds = [1492, 3, 13, 59, 136]
+    # index = [1, 0, 2, 0, 4]
+    # vec = []
+    # for s, i in zip(seeds, index):
+    #     np.random.seed(s)
+    #     vec.append(gen_noise()[i])
+    # vec = np.array(vec)
+    # print(vec.shape)
+    # np.save('vector.npy', vec)
+
+    noise = np.load('vector.npy')
     with open(sys.argv[1]) as f:
         for line in f:
-            np.random.seed(1489)
+            np.random.seed(136)
             test_index, feature = line.split(',')
             feature = feature.strip('\n').split(' ')
             hair = hair2id[feature[feature.index('hair') - 1] + ' hair'] if 'hair' in feature else None
             eyes = eyes2id[feature[feature.index('eyes') - 1] + ' eyes'] if 'eyes' in feature else None
-            noise = gen_noise()
+            # noise = gen_noise()
+            # with open('vector.txt', 'a+') as f:
+            #     f.write(str(noise[1]))
+
             tags = gen_specified_tags(hair, eyes)
             pics = generator.predict([noise, tags])
             for pic_index, pic in enumerate(pics, 1):
                 picname = os.path.join(img_save_dir, 'sample_%s_%d.jpg' % (test_index, pic_index))
                 scipy.misc.imsave(picname, denorm_img(pic))
+
+# 1492 - 1
+# 3 - 0
+# 13 - 2
+# 59 - 0
+# 136 - 4
