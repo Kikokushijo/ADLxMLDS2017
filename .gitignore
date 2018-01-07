@@ -130,3 +130,4 @@ ENV/
 
 # jupyter notebook
 *.ipynb
+*.hdf5
